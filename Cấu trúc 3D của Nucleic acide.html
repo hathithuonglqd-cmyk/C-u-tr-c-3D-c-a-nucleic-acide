@@ -1,0 +1,762 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Giáo Trình Tương Tác 3D: DNA & RNA Chuyên Sâu</title>
+    <style>
+        :root {
+            --bg-color: #060913;
+            --panel-bg: rgba(10, 16, 30, 0.9);
+            --accent-cyan: #00f0ff;
+            --accent-green: #39ff14;
+            --accent-yellow: #ffd700;
+            --accent-red: #ff3131;
+            --accent-purple: #e056fd;
+            --text-main: #ffffff;
+            --text-sub: #94a3b8;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            user-select: none;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            overflow: hidden;
+            width: 100vw;
+            height: 100vh;
+        }
+
+        #webgl-container {
+            width: 100%;
+            height: 100%;
+            position: absolute;
+            top: 0;
+            left: 0;
+            z-index: 1;
+        }
+
+        .ui-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 10;
+            pointer-events: none;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            padding: 20px;
+        }
+
+        .ui-element {
+            pointer-events: auto;
+            background: var(--panel-bg);
+            border: 1px solid rgba(0, 240, 255, 0.3);
+            backdrop-filter: blur(12px);
+            border-radius: 10px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.7);
+        }
+
+        header {
+            padding: 15px 25px;
+            max-width: 420px;
+        }
+        header h1 {
+            font-size: 20px;
+            color: var(--accent-cyan);
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            margin-bottom: 4px;
+        }
+        header p {
+            font-size: 13px;
+            color: var(--text-sub);
+        }
+
+        #info-panel {
+            position: absolute;
+            right: 20px;
+            top: 20px;
+            width: 360px;
+            max-height: calc(100% - 140px);
+            padding: 20px;
+            overflow-y: auto;
+        }
+        .panel-section {
+            display: none;
+        }
+        .panel-section.active {
+            display: block;
+        }
+        .panel-section h2 {
+            font-size: 18px;
+            color: var(--accent-cyan);
+            margin-bottom: 10px;
+            border-bottom: 1px solid rgba(0, 240, 255, 0.3);
+            padding-bottom: 6px;
+        }
+        .panel-section p {
+            font-size: 13.5px;
+            line-height: 1.5;
+            color: #cbd5e1;
+            margin-bottom: 10px;
+        }
+
+        .note-box {
+            background: rgba(255, 255, 255, 0.05);
+            border-left: 4px solid var(--accent-cyan);
+            padding: 12px;
+            margin-top: 10px;
+            font-size: 13px;
+            line-height: 1.6;
+        }
+
+        .legend-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+            margin: 10px 0;
+            font-size: 12.5px;
+        }
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .color-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            display: inline-block;
+        }
+
+        #interactive-popup {
+            position: absolute;
+            bottom: 100px;
+            right: 20px;
+            width: 320px;
+            padding: 15px;
+            background: rgba(6, 12, 26, 0.95);
+            border: 1px solid var(--accent-green);
+            border-radius: 8px;
+            display: none;
+            z-index: 20;
+            pointer-events: auto;
+            box-shadow: 0 0 15px rgba(57, 255, 20, 0.3);
+        }
+        #interactive-popup h3 {
+            color: var(--accent-green);
+            font-size: 15px;
+            margin-bottom: 6px;
+        }
+        #interactive-popup p {
+            font-size: 12.5px;
+            color: #e2e8f0;
+            line-height: 1.4;
+        }
+
+        nav#main-menu {
+            align-self: center;
+            display: flex;
+            gap: 10px;
+            padding: 10px 18px;
+            margin-bottom: 10px;
+        }
+        .nav-btn {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            color: var(--text-sub);
+            padding: 10px 16px;
+            font-size: 12.5px;
+            font-weight: bold;
+            cursor: pointer;
+            border-radius: 6px;
+            transition: all 0.2s ease;
+            text-transform: uppercase;
+        }
+        .nav-btn:hover {
+            border-color: var(--accent-cyan);
+            color: var(--text-main);
+        }
+        .nav-btn.active {
+            background: rgba(0, 240, 255, 0.15);
+            border-color: var(--accent-cyan);
+            color: var(--accent-cyan);
+            box-shadow: 0 0 10px rgba(0, 240, 255, 0.4);
+        }
+
+        #action-controls {
+            position: absolute;
+            bottom: 90px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 10px;
+            pointer-events: auto;
+        }
+        .action-btn {
+            background: #0f172a;
+            border: 1px solid var(--accent-cyan);
+            color: #fff;
+            padding: 8px 14px;
+            font-size: 12px;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        .action-btn.active {
+            background: var(--accent-cyan);
+            color: #000;
+            font-weight: bold;
+        }
+
+        #game-container {
+            position: absolute;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: var(--panel-bg);
+            border: 1px solid var(--accent-yellow);
+            padding: 15px 20px;
+            border-radius: 8px;
+            display: none;
+            pointer-events: auto;
+            text-align: center;
+        }
+        #game-container h3 {
+            color: var(--accent-yellow);
+            font-size: 14px;
+            margin-bottom: 8px;
+        }
+        .game-options {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            margin-top: 8px;
+        }
+        .game-opt-btn {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            border: none;
+            font-weight: bold;
+            font-size: 14px;
+            cursor: pointer;
+            color: #000;
+        }
+
+        #loader {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: var(--bg-color);
+            z-index: 100;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+        }
+        .spinner {
+            width: 45px; height: 45px;
+            border: 3px solid rgba(0, 240, 255, 0.1);
+            border-radius: 50%;
+            border-top-color: var(--accent-cyan);
+            animation: spin 1s infinite linear;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        @media (max-width: 768px) {
+            #info-panel { width: calc(100% - 40px); bottom: 90px; top: auto; max-height: 180px; }
+            #interactive-popup { width: calc(100% - 40px); bottom: 180px; right: 20px; }
+            nav#main-menu { flex-wrap: wrap; justify-content: center; }
+            .nav-btn { font-size: 11px; padding: 6px 10px; }
+        }
+    </style>
+</head>
+<body>
+
+    <div id="loader">
+        <div class="spinner"></div>
+        <p style="margin-top:12px; color:var(--accent-cyan); font-size:13px;">ĐANG NẠP MÔ HÌNH HÓA HỌC & KHÔNG GIANG DNA/RNA...</p>
+    </div>
+
+    <div id="webgl-container"></div>
+
+    <div class="ui-overlay">
+        <header class="ui-element">
+            <h1>DNA & RNA 3D</h1>
+            <p>Mô Phỏng Cấu Trúc Hóa Học & Không Gian Sinh Học</p>
+        </header>
+
+        <div id="info-panel" class="ui-element">
+            <!-- Module A -->
+            <div id="sect-modA" class="panel-section active">
+                <h2>1. Cấu Trúc Hóa Học DNA</h2>
+                <p>DNA là đại phân tử sinh học cấu tạo theo <b>nguyên tắc đa phân</b>, đơn phân là 4 loại Nucleotide.</p>
+                <div class="legend-grid">
+                    <div class="legend-item"><span class="color-dot" style="background:#ff3131;"></span> Adenine (A)</div>
+                    <div class="legend-item"><span class="color-dot" style="background:#39ff14;"></span> Thymine (T)</div>
+                    <div class="legend-item"><span class="color-dot" style="background:#00f0ff;"></span> Guanine (G)</div>
+                    <div class="legend-item"><span class="color-dot" style="background:#ffd700;"></span> Cytosine (C)</div>
+                    <div class="legend-item"><span class="color-dot" style="background:#ffa500;"></span> Đường & Photphat</div>
+                    <div class="legend-item"><span class="color-dot" style="background:#ffffff;"></span> Liên kết Hydro</div>
+                </div>
+                <div class="note-box">
+                    💡 <b>Liên kết Hóa học:</b><br>
+                    • Liên kết Photphodieste nối các Nu trên 1 mạch.<br>
+                    • Liên kết Hydro nối 2 mạch theo <b>Nguyên tắc bổ sung</b>: <b>A = T</b> (2 liên kết), <b>G ≡ C</b> (3 liên kết).
+                </div>
+            </div>
+
+            <!-- Module B -->
+            <div id="sect-modB" class="panel-section">
+                <h2>2. Cấu Trúc Không Gian DNA</h2>
+                <p>Chuỗi xoắn đôi gồm 2 mạch đơn song song, xoắn đều quanh 1 trục theo chiều từ trái sang phải (xoắn phải).</p>
+                <div class="note-box">
+                    📏 <b>Thông số kích thước & Liên kết Hydro:</b><br>
+                    • Các vạch mờ trắng ở giữa chính là <b>Liên kết Hydro</b> giữ ổn định chuỗi xoắn đôi.<br>
+                    • Đường kính vòng xoắn: <b>20 Å</b> (2 nm).<br>
+                    • Chiều dài 1 chu kỳ xoắn: <b>34 Å</b> (3.4 nm) gồm 10 cặp Nucleotide.<br>
+                    • Khoảng cách giữa 2 cặp Nu: <b>3.4 Å</b>.
+                </div>
+            </div>
+
+            <!-- Module C -->
+            <div id="sect-modC" class="panel-section">
+                <h2>3. Cấu Trúc 3 Loại RNA</h2>
+                <p>RNA gồm 1 chuỗi Polyribonucleotide. Đơn phân chứa Uracil (U) thay cho Thymine (T).</p>
+                <div id="rna-desc-box" class="note-box">
+                    <b>mRNA (RNA thông tin):</b> Dạng mạch đơn thẳng, làm khuôn cho quá trình dịch mã tổng hợp Protein.
+                </div>
+            </div>
+
+            <!-- Module D -->
+            <div id="sect-modD" class="panel-section">
+                <h2>4. Thử Thách Lắp Ghép DNA</h2>
+                <p>Thực hành nguyên tắc bổ sung bằng cách chọn Nucleotide chính xác để hoàn thành cặp ADN xoắn đôi.</p>
+                <div class="note-box" style="border-left-color: var(--accent-yellow);">
+                    👉 Quan sát Nucleotide bổ sung nhấp nháy trên mô hình và chọn nút A, T, G, C tương ứng ở trên!
+                </div>
+            </div>
+        </div>
+
+        <div id="interactive-popup">
+            <h3 id="popup-title">Tên cấu trúc</h3>
+            <p id="popup-body">Chi tiết cấu trúc hóa học và sinh học.</p>
+        </div>
+
+        <!-- Khung Game Lắp Ghép -->
+        <div id="game-container">
+            <h3 id="game-question">Mạch gốc có bazơ: A. Hãy chọn bazơ bổ sung?</h3>
+            <div class="game-options">
+                <button class="game-opt-btn" style="background:#ff3131;" onclick="checkGameAnswer('A')">A</button>
+                <button class="game-opt-btn" style="background:#39ff14;" onclick="checkGameAnswer('T')">T</button>
+                <button class="game-opt-btn" style="background:#00f0ff;" onclick="checkGameAnswer('G')">G</button>
+                <button class="game-opt-btn" style="background:#ffd700;" onclick="checkGameAnswer('C')">C</button>
+            </div>
+        </div>
+
+        <div id="action-controls"></div>
+
+        <nav id="main-menu" class="ui-element">
+            <button class="nav-btn active" onclick="switchModule('A')">1. Hóa Học DNA</button>
+            <button class="nav-btn" onclick="switchModule('B')">2. Không Gian DNA</button>
+            <button class="nav-btn" onclick="switchModule('C')">3. Cấu Trúc RNA</button>
+            <button class="nav-btn" onclick="switchModule('D')">4. Tương Tác Lắp Ghép</button>
+        </nav>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+
+    <script>
+        let scene, camera, renderer, controls;
+        let currentModule = 'A';
+        let mainGroup;
+        let raycaster = new THREE.Raycaster();
+        let mouse = new THREE.Vector2();
+
+        let currentRNAType = 'mRNA';
+
+        let gameStep = 0;
+        const gameSequence = ['A', 'G', 'T', 'C'];
+        let activeGameMesh = null;
+
+        const COLORS = {
+            A: 0xff3131,
+            T: 0x39ff14,
+            G: 0x00f0ff,
+            C: 0xffd700,
+            U: 0xe056fd,
+            backbone: 0xffa500,
+            hydrogen: 0xffffff,
+            ribosome: 0x48dbfb
+        };
+
+        window.addEventListener('DOMContentLoaded', () => {
+            initEngine();
+            buildModule('A');
+            animate();
+
+            document.getElementById('loader').style.opacity = '0';
+            setTimeout(() => document.getElementById('loader').style.display = 'none', 500);
+        });
+
+        function initEngine() {
+            const container = document.getElementById('webgl-container');
+
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x060913);
+
+            camera = new THREE.PerspectiveCamera(45, container.clientWidth / container.clientHeight, 0.1, 100);
+            camera.position.set(0, 0, 9);
+
+            renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer.setSize(container.clientWidth, container.clientHeight);
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+            container.appendChild(renderer.domElement);
+
+            controls = new THREE.OrbitControls(camera, renderer.domElement);
+            controls.enableDamping = true;
+            controls.dampingFactor = 0.05;
+
+            const ambLight = new THREE.AmbientLight(0xffffff, 0.7);
+            scene.add(ambLight);
+
+            const dirLight = new THREE.DirectionalLight(0x00f0ff, 0.8);
+            dirLight.position.set(5, 10, 7);
+            scene.add(dirLight);
+
+            mainGroup = new THREE.Group();
+            scene.add(mainGroup);
+
+            window.addEventListener('pointerdown', onPointerDown);
+            window.addEventListener('resize', onWindowResize);
+        }
+
+        function onWindowResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        }
+
+        function switchModule(mod) {
+            if (currentModule === mod) return;
+            currentModule = mod;
+
+            document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+            event.target.classList.add('active');
+
+            document.querySelectorAll('.panel-section').forEach(s => s.classList.remove('active'));
+            document.getElementById(`sect-mod${mod}`).classList.add('active');
+
+            document.getElementById('action-controls').innerHTML = '';
+            document.getElementById('interactive-popup').style.display = 'none';
+            document.getElementById('game-container').style.display = 'none';
+
+            while (mainGroup.children.length > 0) {
+                mainGroup.remove(mainGroup.children[0]);
+            }
+
+            buildModule(mod);
+        }
+
+        function buildModule(mod) {
+            controls.reset();
+            camera.position.set(0, 0, 9);
+
+            if (mod === 'A') {
+                createChemicalDNAModel();
+            } else if (mod === 'B') {
+                createSpatialDNAModel();
+            } else if (mod === 'C') {
+                setupRNAControls();
+                createRNAModel('mRNA');
+            } else if (mod === 'D') {
+                setupGameModule();
+            }
+        }
+
+        function createChemicalDNAModel() {
+            const group = new THREE.Group();
+            const pairs = [
+                { b1: 'A', b2: 'T', y: 1.2 },
+                { b1: 'G', b2: 'C', y: 0.0 },
+                { b1: 'T', b2: 'A', y: -1.2 }
+            ];
+
+            pairs.forEach(p => {
+                const pairGroup = new THREE.Group();
+                pairGroup.position.y = p.y;
+
+                const mesh1 = createCylinderMesh(COLORS[p.b1], -0.8, 0, 0, 0.18, 1.2);
+                mesh1.userData = { title: `Bazo Nitơ: ${p.b1}`, desc: `Đơn phân Bazơ Nitơ loại ${p.b1}. Cho khả năng liên kết bổ sung chính xác.` };
+                pairGroup.add(mesh1);
+
+                const mesh2 = createCylinderMesh(COLORS[p.b2], 0.8, 0, 0, 0.18, 1.2);
+                mesh2.userData = { title: `Bazo Nitơ: ${p.b2}`, desc: `Đơn phân Bazơ Nitơ loại ${p.b2}. Liên kết hydro với mạch đối diện.` };
+                pairGroup.add(mesh2);
+
+                const bbL = createSphereMesh(COLORS.backbone, -1.6, 0, 0, 0.28);
+                bbL.userData = { title: "Khung Đường - Photphat", desc: "Gồm đường Deoxyribose (C5H10O4) liên kết với nhóm Axit Photphoric (H3PO4) bằng liên kết hóa trị Photphodieste." };
+                const bbR = createSphereMesh(COLORS.backbone, 1.6, 0, 0, 0.28);
+                bbR.userData = bbL.userData;
+                pairGroup.add(bbL, bbR);
+
+                const bondCount = (p.b1 === 'A' || p.b1 === 'T') ? 2 : 3;
+                for (let i = 0; i < bondCount; i++) {
+                    const hY = (i - (bondCount - 1) / 2) * 0.12;
+                    const hMesh = createCylinderMesh(COLORS.hydrogen, 0, hY, 0, 0.04, 0.3);
+                    hMesh.userData = { 
+                        title: `Liên Kết Hydro (${bondCount} liên kết)`, 
+                        desc: `Liên kết yếu nối 2 chuỗi Polynucleotide. Cặp A-T gồm 2 liên kết, cặp G-C gồm 3 liên kết hydro.` 
+                    };
+                    pairGroup.add(hMesh);
+                }
+
+                group.add(pairGroup);
+            });
+
+            mainGroup.add(group);
+        }
+
+        // CẤU TRÚC KHÔNG GIANG DNA CÓ BỔ SUNG LIÊN KẾT HYDRO MỜ MỜ
+        function createSpatialDNAModel() {
+            const group = new THREE.Group();
+            const numPairs = 24;
+            const height = 9;
+
+            // Loại bazơ luân phiên để tạo tính thực tế
+            const baseTypes = [
+                { b1: 'A', b2: 'T', count: 2 },
+                { b1: 'G', b2: 'C', count: 3 },
+                { b1: 'T', b2: 'A', count: 2 },
+                { b1: 'C', b2: 'G', count: 3 }
+            ];
+
+            for (let i = 0; i < numPairs; i++) {
+                const progress = i / numPairs;
+                const angle = progress * Math.PI * 4;
+                const y = (progress - 0.5) * height;
+
+                const pairData = baseTypes[i % 4];
+
+                const pairGroup = new THREE.Group();
+                pairGroup.position.set(0, y, 0);
+                pairGroup.rotation.y = angle;
+
+                // Bazơ 1 (Trái)
+                const b1 = createCylinderMesh(COLORS[pairData.b1], -0.65, 0, 0, 0.1, 1.0);
+                b1.userData = { title: `Cặp Nu (${pairData.b1}-${pairData.b2})`, desc: "Đường kính vòng xoắn không đổi = 20 Å (2nm) do 1 bazo lớn (A,G) luôn kết hợp 1 bazo nhỏ (T,C)." };
+                
+                // Bazơ 2 (Phải)
+                const b2 = createCylinderMesh(COLORS[pairData.b2], 0.65, 0, 0, 0.1, 1.0);
+                b2.userData = b1.userData;
+
+                // Khung Đường - Photphat 2 bên
+                const bb1 = createSphereMesh(COLORS.backbone, -1.25, 0, 0, 0.18);
+                bb1.userData = { title: "Chu Kỳ Xoắn (34 Å)", desc: "Mỗi chu kỳ xoắn dài 34 Å gồm đúng 10 cặp Nucleotide. Khoảng cách giữa 2 cặp liền kề là 3.4 Å." };
+                const bb2 = createSphereMesh(COLORS.backbone, 1.25, 0, 0, 0.18);
+                bb2.userData = bb1.userData;
+
+                // HIỂN THỊ LIÊN KẾT HYDRO MỜ MỜ Ở GIỮA
+                const hGroup = new THREE.Group();
+                for (let j = 0; j < pairData.count; j++) {
+                    const hY = (j - (pairData.count - 1) / 2) * 0.08;
+                    const hGeo = new THREE.CylinderGeometry(0.025, 0.025, 0.3, 8);
+                    
+                    // Material bán trong suốt mờ mờ
+                    const hMat = new THREE.MeshBasicMaterial({
+                        color: 0xffffff,
+                        transparent: true,
+                        opacity: 0.45
+                    });
+                    const hMesh = new THREE.Mesh(hGeo, hMat);
+                    hMesh.rotation.z = Math.PI / 2;
+                    hMesh.position.set(0, hY, 0);
+                    hMesh.userData = {
+                        title: `Liên kết Hydro (${pairData.count} liên kết mờ)`,
+                        desc: `Liên kết Hydro yếu (mờ) giữ liên kết giữa 2 mạch không gian, tạo độ bền dẻo cho phân tử DNA.`
+                    };
+                    hGroup.add(hMesh);
+                }
+
+                pairGroup.add(b1, b2, bb1, bb2, hGroup);
+                group.add(pairGroup);
+            }
+
+            mainGroup.add(group);
+        }
+
+        function setupRNAControls() {
+            const container = document.getElementById('action-controls');
+            const types = [
+                { id: 'mRNA', text: 'mRNA (Thông tin)' },
+                { id: 'tRNA', text: 'tRNA (Vận chuyển)' },
+                { id: 'rRNA', text: 'rRNA (Ribosome)' }
+            ];
+
+            types.forEach(t => {
+                const btn = document.createElement('button');
+                btn.className = `action-btn ${t.id === 'mRNA' ? 'active' : ''}`;
+                btn.innerText = t.text;
+                btn.onclick = (e) => {
+                    document.querySelectorAll('#action-controls .action-btn').forEach(b => b.classList.remove('active'));
+                    e.target.classList.add('active');
+                    currentRNAType = t.id;
+                    updateRNADesc(t.id);
+                    createRNAModel(t.id);
+                };
+                container.appendChild(btn);
+            });
+        }
+
+        function updateRNADesc(type) {
+            const box = document.getElementById('rna-desc-box');
+            if (type === 'mRNA') {
+                box.innerHTML = "<b>mRNA (RNA thông tin):</b> Dạng mạch đơn thẳng, truyền đạt thông tin di truyền từ DNA đến Ribosome để dịch mã.";
+            } else if (type === 'tRNA') {
+                box.innerHTML = "<b>tRNA (RNA vận chuyển):</b> Cấu trúc lá chẽ ba (thắt nút hydro cục bộ), mang bộ ba đối mã (Anticodon) vận chuyển Axit Amin.";
+            } else if (type === 'rRNA') {
+                box.innerHTML = "<b>rRNA (RNA Ribosome):</b> Mạch đơn xoắn phức tạp kết hợp với Protein cấu tạo nên Ribosome (nơi tổng hợp Protein).";
+            }
+        }
+
+        function createRNAModel(type) {
+            while (mainGroup.children.length > 0) mainGroup.remove(mainGroup.children[0]);
+            const group = new THREE.Group();
+
+            if (type === 'mRNA') {
+                const bases = ['A', 'U', 'G', 'C', 'U', 'A', 'C', 'G'];
+                bases.forEach((b, i) => {
+                    const y = (i - 3.5) * 0.7;
+                    const mesh = createCylinderMesh(COLORS[b], 0, y, 0, 0.15, 0.9);
+                    mesh.userData = { title: `Đơn phân mRNA: Nucleotide ${b}`, desc: "mRNA không có liên kết hydro giữa các bazơ, dạng mạch thẳng nguyên vẹn." };
+                    const bb = createSphereMesh(COLORS.backbone, -0.6, y, 0, 0.22);
+                    bb.userData = { title: "Mạch Xương Sống Ribose", desc: "Gồm đường Ribose (C5H10O5) và nhóm photphat." };
+                    group.add(mesh, bb);
+                });
+
+            } else if (type === 'tRNA') {
+                for (let i = 0; i < 16; i++) {
+                    const angle = (i / 16) * Math.PI * 2;
+                    const r = 1.2 + Math.sin(angle * 3) * 0.6;
+                    const x = Math.cos(angle) * r;
+                    const y = Math.sin(angle) * r;
+
+                    const node = createSphereMesh(COLORS.U, x, y, 0, 0.2);
+                    node.userData = { title: "Thắt Nút Hydro tRNA", desc: "Một số đoạn cuộn xoắn nhờ liên kết hydro cục bộ bổ sung giữa các bazơ nitơ." };
+                    group.add(node);
+                }
+
+            } else if (type === 'rRNA') {
+                const riboGeo = new THREE.SphereGeometry(1.5, 32, 16);
+                const riboMat = new THREE.MeshPhongMaterial({ color: COLORS.ribosome, transparent: true, opacity: 0.6 });
+                const ribo = new THREE.Mesh(riboGeo, riboMat);
+                ribo.userData = { title: "Tiểu Đơn Vị Ribosome (rRNA)", desc: "rRNA chiếm 60% khối lượng Ribosome, tạo khung cấu trúc và xúc tác liên kết Peptide." };
+                group.add(ribo);
+            }
+
+            mainGroup.add(group);
+        }
+
+        function setupGameModule() {
+            document.getElementById('game-container').style.display = 'block';
+            gameStep = 0;
+            renderGameStep();
+        }
+
+        function renderGameStep() {
+            while (mainGroup.children.length > 0) mainGroup.remove(mainGroup.children[0]);
+
+            const group = new THREE.Group();
+            const currentTarget = gameSequence[gameStep];
+
+            document.getElementById('game-question').innerText = `Mạch gốc có bazơ: ${currentTarget}. Hãy chọn bazơ bổ sung đúng?`;
+
+            const baseMesh = createCylinderMesh(COLORS[currentTarget], -0.7, 0, 0, 0.2, 1.2);
+            baseMesh.userData = { title: `Mạch Khuôn: ${currentTarget}`, desc: "Cần tìm Nucleotide bổ sung thích hợp theo nguyên tắc A-T, G-C." };
+            group.add(baseMesh);
+
+            const placeholderGeo = new THREE.CylinderGeometry(0.2, 0.2, 1.2, 16);
+            const placeholderMat = new THREE.MeshBasicMaterial({ color: 0xffffff, wireframe: true });
+            activeGameMesh = new THREE.Mesh(placeholderGeo, placeholderMat);
+            activeGameMesh.rotation.z = Math.PI / 2;
+            activeGameMesh.position.set(0.7, 0, 0);
+            group.add(activeGameMesh);
+
+            mainGroup.add(group);
+        }
+
+        function checkGameAnswer(ans) {
+            const target = gameSequence[gameStep];
+            const correct = (target === 'A' && ans === 'T') ||
+                            (target === 'T' && ans === 'A') ||
+                            (target === 'G' && ans === 'C') ||
+                            (target === 'C' && ans === 'G');
+
+            if (correct) {
+                alert("✅ CHÍNH XÁC! Bạn đã lắp đúng cặp bổ sung.");
+                gameStep = (gameStep + 1) % gameSequence.length;
+                renderGameStep();
+            } else {
+                alert("❌ SAI RỒI! Hãy nhớ: A liên kết T, G liên kết C.");
+            }
+        }
+
+        function onPointerDown(event) {
+            mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+            mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+
+            raycaster.setFromCamera(mouse, camera);
+            const intersects = raycaster.intersectObjects(mainGroup.children, true);
+
+            if (intersects.length > 0) {
+                const obj = intersects[0].object;
+                if (obj.userData && obj.userData.title) {
+                    const popup = document.getElementById('interactive-popup');
+                    document.getElementById('popup-title').innerText = obj.userData.title;
+                    document.getElementById('popup-body').innerText = obj.userData.desc;
+                    popup.style.display = 'block';
+                }
+            }
+        }
+
+        function createCylinderMesh(color, x, y, z, r, h) {
+            const geo = new THREE.CylinderGeometry(r, r, h, 16);
+            const mat = new THREE.MeshPhongMaterial({ color: color, shininess: 80 });
+            const mesh = new THREE.Mesh(geo, mat);
+            mesh.rotation.z = Math.PI / 2;
+            mesh.position.set(x, y, z);
+            return mesh;
+        }
+
+        function createSphereMesh(color, x, y, z, r) {
+            const geo = new THREE.SphereGeometry(r, 16, 16);
+            const mat = new THREE.MeshStandardMaterial({ color: color, metalness: 0.3, roughness: 0.2 });
+            const mesh = new THREE.Mesh(geo, mat);
+            mesh.position.set(x, y, z);
+            return mesh;
+        }
+
+        function animate() {
+            requestAnimationFrame(animate);
+            controls.update();
+
+            if (currentModule === 'B') {
+                mainGroup.rotation.y += 0.008;
+            } else if (currentModule === 'D' && activeGameMesh) {
+                activeGameMesh.rotation.y += 0.03;
+            }
+
+            renderer.render(scene, camera);
+        }
+    </script>
+</body>
+</html>
